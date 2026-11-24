@@ -681,7 +681,7 @@ body.compact main{padding:var(--s3)}
 </style><style id="leftblock">
 #chat>*{margin-left:0;margin-right:auto}
 #chat .win{margin-left:0;margin-right:auto}
-</style><style id="features">
+.tkmark.end{scroll-margin-bottom:4px}.histbtn{display:block;margin:10px auto;padding:8px 16px;border:1px dashed var(--muted);border-radius:999px;background:transparent;color:var(--muted);font:var(--t-caption);cursor:pointer}.histbtn:hover{background:rgba(0,0,0,.04)}</style><style id="features">
 .hist{display:block}.hist .item{opacity:1}
 .ctxlbl{max-width:840px;margin:var(--s4) auto var(--s2) 0;font:var(--t-caption);color:var(--muted);text-align:left;padding-left:var(--s2);border-left:2px solid var(--line)}
 .cleg{display:flex;flex-wrap:wrap;gap:var(--s4);margin:0 0 var(--s2);font:var(--t-caption);color:var(--muted);max-width:840px}
@@ -1214,10 +1214,20 @@ function copyBtn(getText){
 }
 function tkFmt(a){var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return +a.slice(8,10)+' '+M[+a.slice(5,7)-1]+', '+a.slice(11,16)+' IST'}
 function tkMark(kind,text){const d=el('div','closed tkmark '+kind);const p=el('span','tkpill');p.appendChild(icon(kind==='start'?'playCircle':'checkCircle',16));p.appendChild(el('span',null,text));d.appendChild(p);return d}
-function renderChat(t){
- const C=$('chat');C.replaceChildren();C.appendChild(chatLegend());const items=chatItems(t);let day='';const st0=tkMark('start','Ticket opened · '+tkFmt(t.opened_at_ist));st0.dataset.k='started';const lo=t.opened_ts,hi=t.closed_ts;const nb=items.filter(function(i){return i.ts<lo}).length,na=items.filter(function(i){return i.ts>hi}).length;const bef=el('div','hist'),win=el('div','win'),aft=el('div','hist');let T=win,lastZone='';function histBtn(n,word,box){const bt=el('button','histbtn');bt.type='button';bt.setAttribute('aria-expanded','false');const lab=el('span',null,'Show '+n+' '+word+' message'+(n===1?'':'s'));bt.appendChild(lab);bt.addEventListener('click',function(){const o=box.classList.toggle('open');bt.setAttribute('aria-expanded',o?'true':'false');lab.textContent=(o?'Hide ':'Show ')+n+' '+word+' message'+(n===1?'':'s')});return bt}if(nb){C.appendChild(el('div','ctxlbl','Earlier messages in this chat, before the ticket opened (a selection: the latest few, not every message)'));C.appendChild(bef)}C.appendChild(st0);C.appendChild(win);
+function moreBtn(t,n,word){const bt=el('button','histbtn');bt.type='button';bt.textContent='Show '+n+' '+word+' message'+(n===1?'':'s');
+ bt.addEventListener('click',function(){const cc=$('chat');const sc=(window.innerWidth>900&&getComputedStyle(cc).overflowY!=='visible')?cc:null;const top=sc?sc.getBoundingClientRect().top:0;
+  let a=null,off=0;const its=cc.querySelectorAll('.item[data-k]');for(let i=0;i<its.length;i++){const r=its[i].getBoundingClientRect();if(r.top>=top-2){a=its[i];off=r.top-top;break}}
+  t._full=true;renderChat(t,true);
+  if(a){const b=cc.querySelector('.item[data-k="'+a.dataset.k+'"]');if(b){const r=b.getBoundingClientRect();const d=r.top-top-off;if(sc)sc.scrollTop+=d;else window.scrollBy(0,d)}}});return bt}
+function istStr(ts){return new Date(ts+19800000).toISOString().slice(0,19).replace('T',' ')}
+function loadCtx(t){if(!t.ctxfile||t._cx||!window.__mccFetchDay)return;t._cx=1;
+ window.__mccFetchDay(t.ctxfile).then(function(arr){const have=new Set(t.messages.map(function(m){return String(m.id)}));let n=0;
+  arr.forEach(function(a){if(have.has(String(a[0])))return;const fl=a[6]||0;const m={id:String(a[0]),ts:a[1],at_ist:istStr(a[1]),sender:a[2]==='U'?'User':a[2]==='M'?'MSE':'Automated',type:a[3],text:a[4],tags:[],w5:[],emergency_tag:false,ctx:true,chatctx:true};if(a[5])m.text_en=a[5];if(fl&1)m.placeholder=true;if(fl&2)m.trunc=true;t.messages.push(m);n++});
+  if(n&&S.sel===t){renderChat(t);toWindow();requestAnimationFrame(function(){toWindow()})}}).catch(function(){t._cx=0})}
+function renderChat(t,full){full=full||t._full;
+ const C=$('chat');C.replaceChildren();C.appendChild(chatLegend());const items=chatItems(t);let day='';const st0=tkMark('start','Ticket opened · '+tkFmt(t.opened_at_ist));st0.dataset.k='started';const lo=t.opened_ts,hi=t.closed_ts;const nb=items.filter(function(i){return i.ts<lo}).length,na=items.filter(function(i){return i.ts>hi}).length;const bAll=items.filter(function(i){return i.ts<lo}),aAll=items.filter(function(i){return i.ts>hi});const HB=new Set(full?[]:bAll.slice(0,Math.max(0,bAll.length-10))),HA=new Set(full?[]:aAll.slice(10));const bef=el('div','hist'),win=el('div','win'),aft=el('div','hist');let T=win,lastZone='';function histBtn(n,word,box){const bt=el('button','histbtn');bt.type='button';bt.setAttribute('aria-expanded','false');const lab=el('span',null,'Show '+n+' '+word+' message'+(n===1?'':'s'));bt.appendChild(lab);bt.addEventListener('click',function(){const o=box.classList.toggle('open');bt.setAttribute('aria-expanded',o?'true':'false');lab.textContent=(o?'Hide ':'Show ')+n+' '+word+' message'+(n===1?'':'s')});return bt}if(nb){C.appendChild(el('div','ctxlbl','Earlier messages in this chat, before the ticket opened'));C.appendChild(bef);if(HB.size)bef.appendChild(moreBtn(t,HB.size,'earlier'))}C.appendChild(st0);C.appendChild(win);
  items.forEach(function(it){
-  const zone=it.ts<lo?'b':it.ts>hi?'a':'w';T=zone==='b'?bef:zone==='a'?aft:win;if(zone!==lastZone){day='';lastZone=zone}
+  if(HB.has(it)||HA.has(it))return;const zone=it.ts<lo?'b':it.ts>hi?'a':'w';T=zone==='b'?bef:zone==='a'?aft:win;if(zone!==lastZone){day='';lastZone=zone}
   const at=it.kind==='m'?it.m.at_ist:it.kind==='n'?it.n.at_ist:t.escalated_at_ist;const d=at.slice(0,10);
   if(d!==day){day=d;const dv=el('div','day',dayLabel(d));dv.dataset.k='day-'+d;T.appendChild(dv)}
   if(it.kind==='e'){const s=el('div','item inl escl');s.dataset.k='e';const l=el('div','lbl');l.appendChild(icon('escalated',18));l.appendChild(el('span',null,(t.escalated_to_mo?'Escalated to a Medical Officer (internal)':'Escalated (internal)')+' · '+hm(at)));s.appendChild(l);T.appendChild(s);return}
@@ -1239,7 +1249,7 @@ function renderChat(t){
   if(has)bw.appendChild(tg);
   w.appendChild(bw);T.appendChild(w);
  });
- const cl=tkMark('end','Ticket closed · '+tkFmt(t.closed_at_ist));cl.dataset.k='closed';C.appendChild(cl);if(na){C.appendChild(el('div','ctxlbl','Later messages in this chat, after the ticket closed (a selection: the first few)'));C.appendChild(aft)}
+ const cl=tkMark('end','Ticket closed · '+tkFmt(t.closed_at_ist));cl.dataset.k='closed';C.appendChild(cl);if(na){C.appendChild(el('div','ctxlbl','Later messages in this chat, after the ticket closed'));C.appendChild(aft);if(HA.size)aft.appendChild(moreBtn(t,HA.size,'later'))}
  applyChatSearch(true);
 }
 function fact(label,val){const d=el('div','f');d.appendChild(el('span','k',label+': '));d.appendChild(document.createTextNode(val));return d}
@@ -1248,7 +1258,7 @@ function stickyH(){const w=$('tbwrap');if(w)document.documentElement.style.setPr
 function jumpTo(key){
  if(key==='top'){const cc=$('chat');const sc=(window.innerWidth>900&&cc)?cc:$('pane');sc.scrollTo?sc.scrollTo({top:0,behavior:reduced()?'auto':'smooth'}):(sc.scrollTop=0);window.scrollTo(0,0);return}
  const target=key==='start'?(document.querySelector('#chat .tkmark.start')||document.querySelector('#chat .item')):document.querySelector('#chat [data-k="'+key+'"]');if(!target)return;stickyH();
- target.scrollIntoView({block:'start',behavior:reduced()?'auto':'smooth'});target.classList.add('flash');setTimeout(function(){target.classList.remove('flash')},1200);
+ target.scrollIntoView({block:(key==='closed'?'end':'start'),behavior:reduced()?'auto':'smooth'});target.classList.add('flash');setTimeout(function(){target.classList.remove('flash')},1200);
 }
 function step(k,label,time,sub,target,cls){
  const b=el('button','step'+(cls?' '+cls:''));b.type='button';b.dataset.step=k;{const di=el('span','d ic');di.innerHTML=svgHTML({opened:'playCircle',first:'reply',probe:'help',esc:'escalated',closed:'checkCircle'}[k]||'check',18);b.appendChild(di)}
@@ -1503,7 +1513,7 @@ function updatePos(){
 }
 function openTicket(t){
  S.sel=t;const i=S.V.indexOf(t);if(i>=0)S.lastIdx=i;
- renderPane(t);renderChat(t);$('pane').scrollTop=0;toWindow();requestAnimationFrame(function(){toWindow();setTimeout(toWindow,120)});
+ renderPane(t);renderChat(t);loadCtx(t);$('pane').scrollTop=0;toWindow();requestAnimationFrame(function(){toWindow();setTimeout(toWindow,120)});
  if(i>=0)scrollToIdx(i);else renderWindow();updatePos();
  document.body.classList.add('chat-open');window.scrollTo(0,0);
  
@@ -1646,6 +1656,6 @@ function boot(){Promise.resolve(window.__mccGate).then(function(){return main()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 </script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-19" data-count="1274" data-src="days/2026-11-19.50f148f9.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-19" data-count="1274" data-src="days/2026-11-19.410a158b.bin"></script>
 </body>
 </html>
