@@ -681,7 +681,13 @@ body.compact main{padding:var(--s3)}
 </style><style id="leftblock">
 #chat>*{margin-left:0;margin-right:auto}
 #chat .win{margin-left:0;margin-right:auto}
-.tkmark.end{scroll-margin-bottom:4px}.histbtn{display:block;margin:10px auto;padding:8px 16px;border:1px dashed var(--muted);border-radius:999px;background:transparent;color:var(--muted);font:var(--t-caption);cursor:pointer}.histbtn:hover{background:rgba(0,0,0,.04)}</style><style id="features">
+.tkmark.end{scroll-margin-bottom:4px}.histbtn{display:block;margin:10px auto;padding:8px 16px;border:1px dashed var(--muted);border-radius:999px;background:transparent;color:var(--muted);font:var(--t-caption);cursor:pointer}.histbtn:hover{background:rgba(0,0,0,.04)}#whoBtn{font:var(--t-label)}#whoBtn b{font-weight:600}.rvwho{display:none!important}
+#whogate{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(27,39,51,.5);padding:16px}
+#whogate .whobox{width:min(94vw,380px);background:var(--c-low);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--elev);padding:28px 24px;display:flex;flex-direction:column;gap:var(--s3)}
+#whogate h2{margin:0;font:var(--t-headline)}#whogate p{margin:0 0 var(--s2);color:var(--muted);font:var(--t-body-m)}
+#whogate .whopick{padding:14px 16px;border-radius:var(--r-full);border:1px solid var(--line);background:var(--c);color:var(--ink);font:var(--t-title);cursor:pointer}
+#whogate .whopick.pri{background:var(--primary);color:var(--on-primary);border-color:transparent}
+#whogate .whopick:hover{filter:brightness(.97)}@media(max-width:600px){#whoPre{display:none}}</style><style id="features">
 .hist{display:block}.hist .item{opacity:1}
 .ctxlbl{max-width:840px;margin:var(--s4) auto var(--s2) 0;font:var(--t-caption);color:var(--muted);text-align:left;padding-left:var(--s2);border-left:2px solid var(--line)}
 .cleg{display:flex;flex-wrap:wrap;gap:var(--s4);margin:0 0 var(--s2);font:var(--t-caption);color:var(--muted);max-width:840px}
@@ -808,7 +814,8 @@ header.top:after{height:5px!important;z-index:5;background:linear-gradient(90deg
  
  <span class="sp"></span>
  
- <button type="button" class="btn quiet" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-haspopup="menu"><span>Settings</span><span class="ic" data-ic="expandMore"></span></button>
+ <button type="button" class="btn quiet" id="whoBtn" aria-label="Change reviewer"><span id="whoPre">Reviewing as&nbsp;</span><b id="whoName">Choose reviewer</b></button>
+    <button type="button" class="btn quiet" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-haspopup="menu"><span>Settings</span><span class="ic" data-ic="expandMore"></span></button>
 </header>
 <main>
  <div id="listwrap"><div class="ltools"><div class="lrow1"><label class="dayc" title="Choose which day's closed tickets to show"><span class="ic" data-ic="calendar"></span><span class="dlab">Closed on</span><span class="dwrap"><select id="day" aria-label="Day closed"></select><span class="ic" data-ic="expandMore"></span></span></label><button type="button" class="btn" id="filtersBtn" title="Filters" aria-label="Filters" aria-expanded="false" aria-controls="fpop" aria-haspopup="dialog"><span class="ic" data-ic="filter"></span><span>Filters</span><span class="badge" id="fcount" hidden>0</span></button></div><div class="field"><span class="ic" id="icSearch"></span><input type="search" id="q" placeholder="Search tickets  ( / )" aria-label="Search messages and notes"></div><div class="seghead"><span class="sh-t" id="segLabel">Filter by flag</span><button type="button" class="btn quiet" id="flagsBtn" title="What Emergency, Escalated and Probed mean" aria-label="Definitions: what Emergency, Escalated and Probed mean" aria-expanded="false" aria-controls="flagsPop" aria-haspopup="dialog"><span class="ic" data-ic="info"></span><span>Definitions</span></button></div><div class="seg" id="seg" role="group" aria-labelledby="segLabel">
@@ -1219,6 +1226,16 @@ function moreBtn(t,n,word){const bt=el('button','histbtn');bt.type='button';bt.t
   let a=null,off=0;const its=cc.querySelectorAll('.item[data-k]');for(let i=0;i<its.length;i++){const r=its[i].getBoundingClientRect();if(r.top>=top-2){a=its[i];off=r.top-top;break}}
   t._full=true;renderChat(t,true);
   if(a){const b=cc.querySelector('.item[data-k="'+a.dataset.k+'"]');if(b){const r=b.getBoundingClientRect();const d=r.top-top-off;if(sc)sc.scrollTop+=d;else window.scrollBy(0,d)}}});return bt}
+window.__mccNames=['Jessie Liu','Prashanth'];
+function paintWho(){const c=(Prefs.get('reviewer')||'').trim(),a=document.getElementById('whoName'),b=document.getElementById('whoPre');if(a)a.textContent=c||'Choose reviewer';if(b)b.hidden=!c}
+function setWho(n){Prefs.set('reviewer',n);paintWho();try{Sync.ui();Sync.nameSet()}catch(e){}try{refreshPanel()}catch(e){}}
+function askWho(){if(document.getElementById('whogate'))return;const N=window.__mccNames,cur=(Prefs.get('reviewer')||'').trim();const known=N.filter(function(x){return x.toLowerCase()===cur.toLowerCase()})[0]||'';
+ const d=document.createElement('div');d.id='whogate';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-label','Who is reviewing?');
+ const box=document.createElement('div');box.className='whobox';const h=document.createElement('h2');h.textContent='Who is reviewing?';const q=document.createElement('p');q.textContent='Your scores are saved under this name.';box.appendChild(h);box.appendChild(q);
+ const order=known?[known].concat(N.filter(function(x){return x!==known})):N;
+ order.forEach(function(n,i){const b=document.createElement('button');b.type='button';b.className='whopick'+(i===0&&known?' pri':'');b.textContent=(i===0&&known?'Continue as ':'')+n;b.addEventListener('click',function(){d.remove();setWho(n)});box.appendChild(b)});
+ d.appendChild(box);document.body.appendChild(d);const f=box.querySelector('button');if(f)f.focus()}
+function initWho(){const t=document.getElementById('whoBtn');if(t)t.addEventListener('click',askWho);const cur=(Prefs.get('reviewer')||'').trim();if(cur&&!window.__mccNames.some(function(x){return x.toLowerCase()===cur.toLowerCase()}))Prefs.del('reviewer');paintWho();askWho()}
 function istStr(ts){return new Date(ts+19800000).toISOString().slice(0,19).replace('T',' ')}
 function loadCtx(t){if(!t.ctxfile||t._cx||!window.__mccFetchDay)return;t._cx=1;
  window.__mccFetchDay(t.ctxfile).then(function(arr){const have=new Set(t.messages.map(function(m){return String(m.id)}));let n=0;
@@ -1343,7 +1360,7 @@ const Sync={
   });
   try{const pre='mcc-safety-view:rv:';const del=[];
    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.indexOf(pre)===0){const u=key.slice(pre.length);let rec=null;try{rec=JSON.parse(localStorage.getItem(key))}catch(e){}
-    if(rec&&rec.synced&&!ids[u]&&(!nmMatch||String(rec.reviewer||'').trim().toLowerCase()===nmMatch))del.push(key)}}
+    if(rec&&rec.synced&&((nmMatch&&String(rec.reviewer||'').trim().toLowerCase()!==nmMatch)||(!ids[u]&&(!nmMatch||String(rec.reviewer||'').trim().toLowerCase()===nmMatch))))del.push(key)}}
    del.forEach(function(k){Prefs.del(k.slice(16));gone++});
   }catch(e){}
   if(n||gone){renderWindow();refreshPanel();updSumRev();return true}return false;
@@ -1354,7 +1371,7 @@ const Sync={
    let list,nm='';
    if(this.mode==='artifact'){const snap=await this.ab.db.collection('reviews/'+this.ab.uid+'/items').get();list=snap.docs.map(function(d){return d.data()})}
    else{
-    nm=(Prefs.get('reviewer')||'').trim();if(!nm)return;
+    nm=(Prefs.get('reviewer')||'').trim();if(!nm){this.apply([],'\u0000');return}
     const u=REVIEW_API.url+(REVIEW_API.url.indexOf('?')<0?'?':'&')+'action=mine&token='+encodeURIComponent(REVIEW_API.token)+'&reviewer='+encodeURIComponent(nm);
     const res=await fetch(u,{redirect:'follow'});const j=await res.json();if(!j||!j.ok)return;list=j.reviews||[];
    }
@@ -1410,7 +1427,7 @@ function reviewPanel(t){
  const status=function(){const n=['urgency','probing','accuracy','safety'].filter(function(k){return v[k]}).length;hs.textContent=n===4?'complete':(n?(n+' of 4 scored'):'not scored yet')};
  const save=function(){v.reviewer=(Prefs.get('reviewer')||'');v.saved=new Date().toISOString();Prefs.set(key,v);Sync.cur=v;Sync.add(t.ticket_uuid,v);status();renderWindow()};
  hd.addEventListener('click',function(){const o=body.hidden;body.hidden=!o;hd.setAttribute('aria-expanded',o?'true':'false');sec.classList.toggle('open',o);stickyH()});
- const who=el('label','rvwho');who.appendChild(el('span',null,'Reviewer name'));const wi=el('input');wi.type='text';wi.placeholder='Your name';wi.value=Prefs.get('reviewer')||'';wi.addEventListener('input',function(){Prefs.set('reviewer',wi.value.trim());Sync.ui()});wi.addEventListener('change',function(){Sync.nameSet()});const NAMES=['Jessie Liu','Prashanth'];const sel=el('select');sel.id='rvsel';sel.setAttribute('aria-label','Reviewer name');let cur0=(Prefs.get('reviewer')||'').trim();if(/\(test\)\s*$/i.test(cur0)&&NAMES.indexOf(cur0)<0){Prefs.del('reviewer');cur0=''}{const hit=NAMES.filter(function(n){return n.toLowerCase()===cur0.toLowerCase()})[0];if(hit&&hit!==cur0){Prefs.set('reviewer',hit);cur0=hit}}const mk=function(v,l){const o=el('option',null,l);o.value=v;sel.appendChild(o)};mk('','Choose your name');NAMES.forEach(function(n){mk(n,n)});if(cur0&&NAMES.indexOf(cur0)<0)mk(cur0,cur0);sel.value=cur0;if(sel.value!==cur0)sel.value='';wi.hidden=true;sel.addEventListener('change',function(){if(sel.value==='__o'){wi.hidden=false;wi.value='';wi.focus();return}wi.hidden=true;Prefs.set('reviewer',sel.value);Sync.ui();Sync.nameSet()});who.appendChild(sel);who.appendChild(wi);body.appendChild(who);
+ const who=el('label','rvwho');who.appendChild(el('span',null,'Reviewer name'));const wi=el('input');wi.type='text';wi.placeholder='Your name';wi.value=Prefs.get('reviewer')||'';wi.addEventListener('input',function(){Prefs.set('reviewer',wi.value.trim());Sync.ui()});wi.addEventListener('change',function(){Sync.nameSet()});const NAMES=window.__mccNames;const sel=el('select');sel.id='rvsel';sel.setAttribute('aria-label','Reviewer name');let cur0=(Prefs.get('reviewer')||'').trim();if(/\(test\)\s*$/i.test(cur0)&&NAMES.indexOf(cur0)<0){Prefs.del('reviewer');cur0=''}{const hit=NAMES.filter(function(n){return n.toLowerCase()===cur0.toLowerCase()})[0];if(hit&&hit!==cur0){Prefs.set('reviewer',hit);cur0=hit}}const mk=function(v,l){const o=el('option',null,l);o.value=v;sel.appendChild(o)};mk('','Choose your name');NAMES.forEach(function(n){mk(n,n)});if(cur0&&NAMES.indexOf(cur0)<0)mk(cur0,cur0);sel.value=cur0;if(sel.value!==cur0)sel.value='';wi.hidden=true;sel.addEventListener('change',function(){if(sel.value==='__o'){wi.hidden=false;wi.value='';wi.focus();return}wi.hidden=true;Prefs.set('reviewer',sel.value);Sync.ui();Sync.nameSet()});who.appendChild(sel);who.appendChild(wi);body.appendChild(who);
  RV_FIELDS.forEach(function(f){
   const row=el('div','rvrow');row.appendChild(el('div','rvl',f[1]));
   const grp=el('div','rvg');grp.setAttribute('role','group');grp.setAttribute('aria-label',f[1]);
@@ -1622,7 +1639,7 @@ async function main(){
  $('menuBtn').addEventListener('click',function(){togglePop('menuBtn','menu')});
  $('flagsBtn').addEventListener('click',function(){togglePop('flagsBtn','flagsPop')});
  document.addEventListener('click',function(e){const top=Layers.top();if(!top||e.timeStamp<=top.born)return;if(top.el.contains(e.target)||(top.trigger&&top.trigger.contains(e.target)))return;if(top.kind==='dialog'&&e.target.closest&&e.target.closest('#modal .box'))return;Layers.close()});
- syncEn();$('exportBtn').addEventListener('click',exportReviews);$('clearBtn').addEventListener('click',function(){const b=$('clearBtn');if(!b._arm){b._arm=true;$('clearV').textContent='click again';setTimeout(function(){b._arm=false;$('clearV').textContent=''},4000);return}try{const del=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('mcc-safety-view:rv')===0)del.push(k)}del.forEach(function(k){localStorage.removeItem(k)})}catch(e){}location.reload()});$('syncBtn').addEventListener('click',function(){Sync.flush(true);Sync.pull(true)});Sync.boot();
+ syncEn();$('exportBtn').addEventListener('click',exportReviews);$('clearBtn').addEventListener('click',function(){const b=$('clearBtn');if(!b._arm){b._arm=true;$('clearV').textContent='click again';setTimeout(function(){b._arm=false;$('clearV').textContent=''},4000);return}try{const del=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('mcc-safety-view:rv')===0)del.push(k)}del.forEach(function(k){localStorage.removeItem(k)})}catch(e){}location.reload()});$('syncBtn').addEventListener('click',function(){Sync.flush(true);Sync.pull(true)});Sync.boot();initWho();
  $('enBtn').addEventListener('click',function(){S.en=!S.en;savePrefs();syncEn();if(S.sel)renderChat(S.sel)});
  document.addEventListener('keydown',function(e){if(e.key==='f'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!isTyping(e)&&S.sel){e.preventDefault();toggleFocus()}});
  $('theme').addEventListener('click',function(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');savePrefs()});
@@ -1656,10 +1673,10 @@ function boot(){Promise.resolve(window.__mccGate).then(function(){return main()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 </script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-19" data-count="1274" data-src="days/2026-11-19.410a158b.bin"></script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-18" data-count="984" data-src="days/2026-11-18.4867effe.bin"></script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-17" data-count="912" data-src="days/2026-11-17.60e9f66b.bin"></script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-16" data-count="948" data-src="days/2026-11-16.b458bd02.bin"></script>
-<script type="application/octet-stream" class="day-gz" data-day="2026-11-15" data-count="941" data-src="days/2026-11-15.c8dce626.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-19" data-count="1274" data-src="days/2026-11-19.60962de9.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-18" data-count="984" data-src="days/2026-11-18.d88dcef2.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-17" data-count="912" data-src="days/2026-11-17.4533d8d3.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-16" data-count="948" data-src="days/2026-11-16.d23a7500.bin"></script>
+<script type="application/octet-stream" class="day-gz" data-day="2026-11-15" data-count="941" data-src="days/2026-11-15.f3d1fc61.bin"></script>
 </body>
 </html>
