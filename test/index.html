@@ -1314,7 +1314,7 @@ const Sync={
  },
  nameSet:function(){
   const nm=(Prefs.get('reviewer')||'').trim();
-  if(nm){try{const pre='mcc-safety-test:rv:';const q=this.q();for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.indexOf(pre)===0){const u=key.slice(pre.length);let rec=null;try{rec=JSON.parse(localStorage.getItem(key))}catch(e){}if(rec&&rvComplete(rec)&&!rec.synced&&!String(rec.reviewer||'').trim()&&!q[u]){q[u]={ticket_uuid:u,day:'',reviewer:nm,urgency:rec.urgency||'',urgency_comment:rec.urgency_comment||'',probing:rec.probing||'',probing_comment:rec.probing_comment||'',accuracy:rec.accuracy||'',accuracy_comment:rec.accuracy_comment||'',safety:rec.safety||'',safety_comment:rec.safety_comment||'',overall:rec.overall||'',saved_at:rec.saved||new Date().toISOString()}}}}Prefs.set('rvq',q)}catch(e){}}
+  if(nm){try{const pre='mcc-safety-test:rv:';const q=this.q();for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.indexOf(pre)===0){const u=key.slice(pre.length);let rec=null;try{rec=JSON.parse(localStorage.getItem(key))}catch(e){}if(false&&rec&&rvComplete(rec)&&!rec.synced&&!String(rec.reviewer||'').trim()&&!q[u]){q[u]={ticket_uuid:u,day:'',reviewer:nm,urgency:rec.urgency||'',urgency_comment:rec.urgency_comment||'',probing:rec.probing||'',probing_comment:rec.probing_comment||'',accuracy:rec.accuracy||'',accuracy_comment:rec.accuracy_comment||'',safety:rec.safety||'',safety_comment:rec.safety_comment||'',overall:rec.overall||'',saved_at:rec.saved||new Date().toISOString()}}}}Prefs.set('rvq',q)}catch(e){}}
   this.ui();this.sched();this.pull();
  },
  sched:function(){const me=this;clearTimeout(this._t);this._t=setTimeout(function(){me.flush()},900)},
@@ -1353,14 +1353,14 @@ const Sync={
   this.busy=false;this.ui();
  },
  apply:function(list,nmMatch){
-  const ids={};let n=0,gone=0;
+  const ids={};const pend=this.q();let n=0,gone=0;
   list.forEach(function(r){
    ids[r.ticket_uuid]=1;const k='rv:'+r.ticket_uuid,loc=Prefs.get(k);
    if(!loc||!loc.saved||String(r.saved_at)>String(loc.saved)){Prefs.set(k,{urgency:r.urgency,urgency_comment:r.urgency_comment,probing:r.probing,probing_comment:r.probing_comment,accuracy:r.accuracy,accuracy_comment:r.accuracy_comment,safety:r.safety,safety_comment:r.safety_comment,overall:r.overall,reviewer:r.reviewer,saved:String(r.saved_at),synced:true});n++}
   });
   try{const pre='mcc-safety-test:rv:';const del=[];
    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.indexOf(pre)===0){const u=key.slice(pre.length);let rec=null;try{rec=JSON.parse(localStorage.getItem(key))}catch(e){}
-    if(rec&&rec.synced&&((nmMatch&&String(rec.reviewer||'').trim().toLowerCase()!==nmMatch)||(!ids[u]&&(!nmMatch||String(rec.reviewer||'').trim().toLowerCase()===nmMatch))))del.push(key)}}
+    if(rec&&rec.synced&&((nmMatch&&String(rec.reviewer||'').trim().toLowerCase()!==nmMatch)||(!ids[u]&&(!nmMatch||String(rec.reviewer||'').trim().toLowerCase()===nmMatch))))del.push(key);else if(rec&&REVIEW_API.url&&Sync.mode==='sheet'&&rvComplete(rec)&&!ids[u]&&!pend[u]&&(Date.now()-Date.parse(rec.saved||0))>120000)del.push(key)}}
    del.forEach(function(k){Prefs.del(k.slice(16));gone++});
   }catch(e){}
   if(n||gone){renderWindow();refreshPanel();updSumRev();return true}return false;
@@ -1373,11 +1373,11 @@ const Sync={
    else{
     nm=(Prefs.get('reviewer')||'').trim();if(!nm){this.apply([],'\u0000');return}
     const u=REVIEW_API.url+(REVIEW_API.url.indexOf('?')<0?'?':'&')+'action=mine&token='+encodeURIComponent(REVIEW_API.token)+'&reviewer='+encodeURIComponent(nm);
-    const res=await fetch(u,{redirect:'follow'});const j=await res.json();if(!j||!j.ok)return;list=j.reviews||[];
+    const res=await fetch(u,{redirect:'follow'});const j=await res.json();if(!j||!j.ok){this.pullErr=1;this.ui();return}list=j.reviews||[];this.pullErr=0;
    }
    const ch=this.apply(list,nm.toLowerCase());
    if(manual)Toast.show(ch?'Reviews updated from the shared store.':'Already up to date.');
-  }catch(e){}
+  }catch(e){if(this.mode==='sheet'){this.pullErr=1;this.ui()}}
  },
  ui:function(){
   const q=this.q(),n=Object.keys(q).length,nm=(Prefs.get('reviewer')||'').trim(),c=this.cur;
@@ -1390,7 +1390,7 @@ const Sync={
   else if(n)t=n+' waiting to sync.';
   else if(this.mode==='artifact')t='All your scores are saved to this page. To get them out, use Settings, Export my reviews.'+(this.sheet==='sent'?' Also sent to the Google Sheet.':(this.sheet==='beacon'?' Also sent to the Google Sheet, which this page cannot confirm. Please check the Sheet.':''));
   else t='All your scores are synced to the shared sheet.';
-  const e=document.getElementById('rvsync');if(e)e.textContent=t;
+  if(this.pullErr&&this.mode==='sheet')t='Could not load your scores from the shared sheet just now, so "reviewed" marks may be out of date. Retrying every 30 seconds.';const e=document.getElementById('rvsync');if(e)e.textContent=t;
   const v=document.getElementById('syncV');if(v)v.textContent=this.enabled()?(n?n+' waiting':'up to date'):'off';
  },
  boot:function(){const me=this;this.init().then(function(){me.ui();if(!me.enabled())return;me.flush();me.pull();setInterval(function(){me.flush();me.pull()},30000);window.addEventListener('online',function(){me.flush()})})}
